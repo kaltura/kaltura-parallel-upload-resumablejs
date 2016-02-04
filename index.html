@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Parallel Chunked HTTP Upload to Kaltura</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="resumable.js"></script>
+  </head>
+  <body>
+    <div id="frame">
+
+      <h3>Parallel Chunked HTTP Upload to Kaltura</h3>
+      
+      <script >
+          function setInputValue(id, value) {
+              document.getElementById(id).value=value;
+          }
+          function getInputValue(id) {
+              return document.getElementById(id).value;
+          }
+          var VERY_BIG_CHUNK = Math.pow(2,100);
+      </script>
+
+      <div class="resumable-error">
+        Your browser, unfortunately, is not supported by Resumable.js. The library requires support for <a href="http://www.w3.org/TR/FileAPI/">the HTML5 File API</a> along with <a href="http://www.w3.org/TR/FileAPI/#normalization-of-params">file slicing</a>.
+      </div>
+
+      <table>
+          <tr><td>Simultaneous uploads:</td><td><input id="inputSimUploads" type="text" value="5"> 
+            <button onclick="setInputValue('inputSimUploads', this.textContent)">1</button>  
+            <button onclick="setInputValue('inputSimUploads', this.textContent)">2</button>  
+            <button onclick="setInputValue('inputSimUploads', this.textContent)">4</button>  
+            <button onclick="setInputValue('inputSimUploads', this.textContent)">5</button>  
+            <button onclick="setInputValue('inputSimUploads', this.textContent)">6</button>  
+            <button onclick="setInputValue('inputSimUploads', this.textContent)">10</button>  
+          </td></tr>
+          <tr><td>Chunk size (kb):</td><td><input id="inputChunkSize" type="text" value="1024">
+            <button onclick="setInputValue('inputChunkSize', -1)">Unchunked</button>  
+            <button onclick="setInputValue('inputChunkSize', this.textContent)">256</button>  
+            <button onclick="setInputValue('inputChunkSize', this.textContent)">512</button>  
+            <button onclick="setInputValue('inputChunkSize', this.textContent)">1024</button>  
+            <button onclick="setInputValue('inputChunkSize', this.textContent)">2048</button>  
+            <button onclick="setInputValue('inputChunkSize', this.textContent)">4096</button>  
+          </td></tr>
+          <tr><td>KS:</td><td><textarea cols="100" id="inputKS">Replace this text with a valid Kaltura Session</textarea></td></tr>
+      </table>
+      
+      
+
+      <div class="resumable-drop" ondragenter="jQuery(this).addClass('resumable-dragover');" ondragend="jQuery(this).removeClass('resumable-dragover');" ondrop="jQuery(this).removeClass('resumable-dragover');">
+        Drop video files here to upload or <a class="resumable-browse"><u>select from your computer</u></a>
+      </div>
+
+      <div class="resumable-progress">
+        <table>
+          <tr>
+            <td width="100%"><div class="progress-container"><div class="progress-bar"></div></div></td>
+            <td class="progress-text" nowrap="nowrap"></td>
+            <td class="progress-pause" nowrap="nowrap">
+              <a href="#" onclick="r.upload(); return(false);" class="progress-resume-link"><img src="resume.png" title="Resume upload" /></a>
+              <a href="#" onclick="r.pause(); return(false);" class="progress-pause-link"><img src="pause.png" title="Pause upload" /></a>
+              <a href="#" onclick="r.cancel(); return(false);" class="progress-cancel-link"><img src="cancel.png" title="Cancel upload" /></a>
+            </td>
+          </tr>
+        </table>
+      </div>
+      
+      <div id="report" style="color: rgb(0, 111, 255); font-size: large; text-align: center;"></div>
+
+      <ul class="resumable-list"></ul>
+
+      <script>
+        var kalturaSessionKey = null;
+        var kalturaServerBase = "http://www.kaltura.com/api_v3";
+        var lastUploadToken = null;
+        
+        function kDoJSONRequest(server, ks, path, queryString, callback) {
+            
+            var url = server + path + "?format=1&ks=" + ks + "&" + queryString;
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", url, true);
+            xhr.responseType = "json";
+            xhr.onload = function(event) {
+                callback(event.target.response);
+            };
+            xhr.send();
+        }
+        
+        function kAnalyticsRequest(query) {
+            //do something with the upload stats for QoS
+            /*
+            var url = "http://uploadnalytics/upload_stats.php";
+            var params = [];
+            for (var key in query) {
+                if (query.hasOwnProperty(key)) {
+                    var value = query[key];
+                    params.push(key + "=" + encodeURIComponent(value));
+                }
+            }
+            params = params.join('&');
+            url = url + "?" + params;
+
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", url, true);
+            xhr.send();
+            */
+        }
+
+        function kAddUploadToNewMedia(server, ks, uploadToken, name) {
+            
+            kDoJSONRequest(server, ks, "/service/media/action/addFromUploadedFile", 
+                "mediaEntry:name=" + encodeURIComponent(name) + "&mediaEntry:mediaType=1" +
+                "&uploadTokenId=" + uploadToken, function(response) {
+                
+                console.log("new media:", response);
+                console.log("media id:", response.id);
+                console.log("media download:", response.downloadUrl);
+            });
+        }
+        
+        function kStartUpload(server, ks, fileName, fileSize, resumable) {
+            
+            resumable.opts.target = server + "/service/uploadToken/action/upload";
+            resumable.opts.fileParameterName = "fileData";
+            
+            
+            kDoJSONRequest(server, ks, "/service/uploadToken/action/add",
+                "uploadToken:objectType=KalturaUploadToken" +
+                "&uploadToken:fileName=" + encodeURIComponent(fileName) +
+                "&uploadToken:fileSize=" + fileSize, function(response) {
+                    
+                    uploadToken = response.id;
+                    lastUploadToken = uploadToken;
+                    var query = function(file, chunk) {
+                        var params = {
+                            format: 1,
+                            ks: ks,
+                            uploadTokenId: uploadToken,
+                            resume: chunk.offset > 0 ? 1 : 0,
+                            resumeAt: chunk.startByte,
+                            finalChunk: chunk.offset+1 == file.chunks.length ? 1 : 0,
+                        };
+                        console.log("resumableQuery called", params);
+                        return params;
+                    };
+                    resumable.opts.query = query;
+                    resumable.upload();
+                    
+                    
+            });
+        }
+        
+        var lastUploadStartTime = null;
+
+        var r = new Resumable({
+            chunkSize:1*1024*1024,
+            simultaneousUploads:5,
+            testChunks:false,
+            throttleProgressCallbacks:1,
+        });
+        // Resumable.js isn't supported, fall back on a different method
+        if(!r.support) {
+          $('.resumable-error').show();
+        } else {
+          // Show a place for dropping/selecting files
+          $('.resumable-drop').show();
+          r.assignDrop($('.resumable-drop')[0]);
+          r.assignBrowse($('.resumable-browse')[0]);
+
+          // Handle file add event
+          r.on('fileAdded', function(file){
+              var chunkSize = parseFloat(getInputValue("inputChunkSize"));
+              if (chunkSize === -1) {
+                  chunkSize = VERY_BIG_CHUNK;
+              }
+                r.opts.chunkSize = chunkSize*1024;
+                r.opts.simultaneousUploads = parseInt(getInputValue("inputSimUploads"));
+                file.bootstrap();
+                kalturaSessionKey = getInputValue("inputKS");
+
+              // Show progress pabr
+              $('.resumable-progress, .resumable-list').show();
+              // Show pause, hide resume
+              $('.resumable-progress .progress-resume-link').hide();
+              $('.resumable-progress .progress-pause-link').show();
+              // Add the file to the list
+              $('.resumable-list').append('<li class="resumable-file-'+file.uniqueIdentifier+'">Uploading <span class="resumable-file-name"></span> <span class="resumable-file-progress"></span>');
+              $('.resumable-file-'+file.uniqueIdentifier+' .resumable-file-name').html(file.fileName);
+              // Actually start the upload
+                kStartUpload(kalturaServerBase, kalturaSessionKey, file.fileName, file.fileSize, r);
+            });
+          r.on('pause', function(){
+              // Show resume, hide pause
+              $('.resumable-progress .progress-resume-link').show();
+              $('.resumable-progress .progress-pause-link').hide();
+            });
+          r.on('complete', function(){
+              // Hide pause/resume when the upload has completed
+              $('.resumable-progress .progress-resume-link, .resumable-progress .progress-pause-link').hide();
+            });
+          r.on('fileSuccess', function(file,message){
+              var duration = (Date.now() - lastUploadStartTime)/1000;
+              console.log("upload success", Date.now());
+              console.log("upload time:", duration);
+              // Reflect that the file upload has completed
+              $('.resumable-file-'+file.uniqueIdentifier+' .resumable-file-progress').html('(completed)');
+              var endTime = Date.now();
+              var report = {
+                  tokenId: lastUploadToken, 
+                  filename: file.fileName, 
+                  start_time: Math.floor(lastUploadStartTime/1000),
+                  end_time: Math.floor(endTime/1000),
+                  file_size: file.size,
+                  method: file.chunks.length > 1 ? 1 : 0,
+                  chunks: r.opts.simultaneousUploads,
+                  chunk_size: r.opts.chunkSize,
+              };
+              kAnalyticsRequest(report);
+
+              
+              // add upload to new media
+              kAddUploadToNewMedia(kalturaServerBase, kalturaSessionKey, lastUploadToken, file.uniqueIdentifier);
+              var mbSize = file.size/1024/1024;
+              var speed = mbSize/duration;
+              var reportDiv = document.getElementById("report");
+              $(reportDiv).html("Upload complete<br><br>File size: <i>" + mbSize.toFixed(3) + "</i>mb<br>Duration: <i>" + duration.toFixed(1) + "</i> seconds<br>Speed: <i>" + speed.toFixed(1) + "</i>MB/s");
+              
+            });
+          r.on('fileError', function(file, message){
+              console.log("upload error", Date.now());
+              // Reflect that the file upload has resulted in error
+              $('.resumable-file-'+file.uniqueIdentifier+' .resumable-file-progress').html('(file could not be uploaded: '+message+')');
+            });
+          r.on('fileProgress', function(file){
+              // Handle progress for both the file and the overall upload
+              $('.resumable-file-'+file.uniqueIdentifier+' .resumable-file-progress').html(Math.floor(file.progress()*100) + '%');
+              $('.progress-bar').css({width:Math.floor(r.progress()*100) + '%'});
+            });
+          r.on('cancel', function(){
+            $('.resumable-file-progress').html('canceled');
+          });
+          r.on('uploadStart', function(){
+              lastUploadStartTime = Date.now();
+              console.log("upload start", Date.now());
+              // Show pause, hide resume
+              $('.resumable-progress .progress-resume-link').hide();
+              $('.resumable-progress .progress-pause-link').show();
+          });
+        }
+      </script>
+
+    </div>
+  </body>
+</html>
