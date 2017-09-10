@@ -46,7 +46,8 @@
             <button onclick="setInputValue('inputChunkSize', this.textContent)">2048</button>  
             <button onclick="setInputValue('inputChunkSize', this.textContent)">4096</button>  
           </td></tr>
-          <tr><td>KS:</td><td><textarea cols="100" id="inputKS">Replace this text with a valid Kaltura Session</textarea></td></tr>
+	  <tr><td>Kaltura Service URL:</td><td><input id="serviceUrl" type="text" value="https://www.kaltura.com"> 
+		  <tr><td>KS:</td><td><textarea cols="100" id="inputKS" placeholder="Replace this text with a valid Kaltura Session"></textarea></td></tr>
       </table>
       
       
@@ -75,7 +76,7 @@
 
       <script>
         var kalturaSessionKey = null;
-        var kalturaServerBase = "http://www.kaltura.com/api_v3";
+        var kalturaServerBase = null; 
         var lastUploadToken = null;
         
         function kDoJSONRequest(server, ks, path, queryString, callback) {
@@ -182,6 +183,7 @@
                 r.opts.simultaneousUploads = parseInt(getInputValue("inputSimUploads"));
                 file.bootstrap();
                 kalturaSessionKey = getInputValue("inputKS");
+		kalturaServerBase = getInputValue("serviceUrl")+"/api_v3";
 
               // Show progress pabr
               $('.resumable-progress, .resumable-list').show();
