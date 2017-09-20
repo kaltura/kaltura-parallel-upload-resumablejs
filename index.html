@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
   <head>
@@ -46,7 +47,7 @@
             <button onclick="setInputValue('inputChunkSize', this.textContent)">2048</button>  
             <button onclick="setInputValue('inputChunkSize', this.textContent)">4096</button>  
           </td></tr>
-	  <tr><td>Kaltura Service URL:</td><td><input id="serviceUrl" type="text" value="https://www.kaltura.com"> 
+	  <tr><td>Kaltura Service URL:</td><td><input id="serviceUrl" type="text" value="//www.kaltura.com"> 
 		  <tr><td>KS:</td><td><textarea cols="100" id="inputKS" placeholder="Replace this text with a valid Kaltura Session"></textarea></td></tr>
       </table>
       
@@ -70,14 +71,16 @@
         </table>
       </div>
       
-      <div id="report" style="color: rgb(0, 111, 255); font-size: large; text-align: center;"></div>
+      <div id="report" style="color: rgb(0, 111, 255);"></div>
 
       <ul class="resumable-list"></ul>
 
       <script>
         var kalturaSessionKey = null;
         var kalturaServerBase = null; 
+	var uploadToken = new Array();
         var lastUploadToken = null;
+	//var fileName = null;
         
         function kDoJSONRequest(server, ks, path, queryString, callback) {
             
@@ -117,15 +120,20 @@
             kDoJSONRequest(server, ks, "/service/media/action/addFromUploadedFile", 
                 "mediaEntry:name=" + encodeURIComponent(name) + "&mediaEntry:mediaType=1" +
                 "&uploadTokenId=" + uploadToken, function(response) {
-                
-                console.log("new media:", response);
-                console.log("media id:", response.id);
-                console.log("media download:", response.downloadUrl);
+		var reportDiv = document.getElementById("report");
+		    if (!response.id){
+			reportDiv.style.color="red";
+			reportDiv.innerHTML='Upload ERROR! Code: ' + response.code + 'Message: ' + response.message;
+			return false;
+		    }
+		    reportDiv.style.color="rgb(0, 111, 255)";
+		    reportDiv.innerHTML="Last fully uploaded entry ID: <b>"+response.id + "</b>, Entry Name: <b>"+response.name+"</b>";
             });
         }
         
-        function kStartUpload(server, ks, fileName, fileSize, resumable) {
-            
+
+
+        function kUpload(server, ks, fileName, fileUniqueIdentifier, fileSize, resumable) {
             resumable.opts.target = server + "/service/uploadToken/action/upload";
             resumable.opts.fileParameterName = "fileData";
             
@@ -134,24 +142,31 @@
                 "uploadToken:objectType=KalturaUploadToken" +
                 "&uploadToken:fileName=" + encodeURIComponent(fileName) +
                 "&uploadToken:fileSize=" + fileSize, function(response) {
+		    if (!response.id){
+			var reportDiv = document.getElementById("report");
+			reportDiv.style.color="red";
+			$(reportDiv).html('Upload ERROR! Code: ' + response.code + '</br>Message: ' + response.message);
+			$('.resumable-file-progress').html('FAILED');
+			return false;
+		    }
                     
-                    uploadToken = response.id;
-                    lastUploadToken = uploadToken;
+		    if (! uploadToken[fileUniqueIdentifier]){
+			uploadToken[fileUniqueIdentifier] = response.id;
+		    }
                     var query = function(file, chunk) {
                         var params = {
                             format: 1,
                             ks: ks,
-                            uploadTokenId: uploadToken,
+                            uploadTokenId: uploadToken[file.uniqueIdentifier],
                             resume: chunk.offset > 0 ? 1 : 0,
                             resumeAt: chunk.startByte,
                             finalChunk: chunk.offset+1 == file.chunks.length ? 1 : 0,
                         };
-                        console.log("resumableQuery called", params);
+                        console.log("uploadToken.upload(): ", params);
                         return params;
                     };
                     resumable.opts.query = query;
                     resumable.upload();
-                    
                     
             });
         }
@@ -194,7 +209,7 @@
               $('.resumable-list').append('<li class="resumable-file-'+file.uniqueIdentifier+'">Uploading <span class="resumable-file-name"></span> <span class="resumable-file-progress"></span>');
               $('.resumable-file-'+file.uniqueIdentifier+' .resumable-file-name').html(file.fileName);
               // Actually start the upload
-                kStartUpload(kalturaServerBase, kalturaSessionKey, file.fileName, file.fileSize, r);
+                kUpload(kalturaServerBase, kalturaSessionKey, file.fileName, file.uniqueIdentifier, file.size, r);
             });
           r.on('pause', function(){
               // Show resume, hide pause
@@ -207,11 +222,11 @@
             });
           r.on('fileSuccess', function(file,message){
               var duration = (Date.now() - lastUploadStartTime)/1000;
-              console.log("upload success", Date.now());
-              console.log("upload time:", duration);
+              var mbSize = file.size/1024/1024;
+              var speed = mbSize/duration;
+              $('.resumable-file-'+file.uniqueIdentifier+' .resumable-file-progress').html('completed! File size: ' + mbSize.toFixed(3) + 'MB , Upload duration: ' + duration.toFixed(1) + ' secs, Speed: '+ speed.toFixed(1)+ ' MB/s');
               // Reflect that the file upload has completed
-              $('.resumable-file-'+file.uniqueIdentifier+' .resumable-file-progress').html('(completed)');
-              var endTime = Date.now();
+              /*var endTime = Date.now();
               var report = {
                   tokenId: lastUploadToken, 
                   filename: file.fileName, 
@@ -223,18 +238,14 @@
                   chunk_size: r.opts.chunkSize,
               };
               kAnalyticsRequest(report);
+	      */
 
               
               // add upload to new media
-              kAddUploadToNewMedia(kalturaServerBase, kalturaSessionKey, lastUploadToken, file.uniqueIdentifier);
-              var mbSize = file.size/1024/1024;
-              var speed = mbSize/duration;
-              var reportDiv = document.getElementById("report");
-              $(reportDiv).html("Upload complete<br><br>File size: <i>" + mbSize.toFixed(3) + "</i>mb<br>Duration: <i>" + duration.toFixed(1) + "</i> seconds<br>Speed: <i>" + speed.toFixed(1) + "</i>MB/s");
+              kAddUploadToNewMedia(kalturaServerBase, kalturaSessionKey, uploadToken[file.uniqueIdentifier], file.uniqueIdentifier);
               
             });
           r.on('fileError', function(file, message){
-              console.log("upload error", Date.now());
               // Reflect that the file upload has resulted in error
               $('.resumable-file-'+file.uniqueIdentifier+' .resumable-file-progress').html('(file could not be uploaded: '+message+')');
             });
@@ -248,7 +259,6 @@
           });
           r.on('uploadStart', function(){
               lastUploadStartTime = Date.now();
-              console.log("upload start", Date.now());
               // Show pause, hide resume
               $('.resumable-progress .progress-resume-link').hide();
               $('.resumable-progress .progress-pause-link').show();
@@ -259,3 +269,4 @@
     </div>
   </body>
 </html>
+
