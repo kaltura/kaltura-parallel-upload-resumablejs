@@ -187,7 +187,7 @@
 		reportDiv.innerHTML=status_msg;
 		report['last_status']=status_msg;
 		// Reflect that the file upload has completed
-		analyticsRequest('http://jessex/parallel-upload/process_upload_stats.php',report);
+		analyticsRequest('/process_upload_stats.php',report);
 		return is_success;
             });
         }
