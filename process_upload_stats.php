@@ -1,6 +1,5 @@
 <?php
 define ('DBFILE',dirname(__FILE__).'/chunked_upload.db');
-var_dump($_GET);
 error_log(print_r($_GET,true),3,'/tmp/parallel_up.log');
 $user_id=SQLite3::escapeString($_GET['user_id']);
 $token_id=SQLite3::escapeString($_GET['token_id']);
