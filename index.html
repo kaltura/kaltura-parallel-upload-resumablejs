@@ -5,11 +5,13 @@
     <title>Parallel Chunked HTTP Upload to Kaltura</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" type="text/css" href="style.css" />
+    <link rel="stylesheet" href="bootstrap.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
     <script src="resumable.js"></script>
   </head>
-  <body>
+  <body class="page">
     
+      <div class="content">
     <a href="https://github.com/kaltura/kaltura-parallel-upload-resumablejs" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#70B7FD; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
 
     <div id="frame">
@@ -30,29 +32,52 @@
         Your browser, unfortunately, is not supported by Resumable.js. The library requires support for <a href="http://www.w3.org/TR/FileAPI/">the HTML5 File API</a> along with <a href="http://www.w3.org/TR/FileAPI/#normalization-of-params">file slicing</a>.
       </div>
 
-      <table>
-          <tr><td>Simultaneous uploads:</td><td><input id="inputSimUploads" type="text" value="5"> 
-            <button onclick="setInputValue('inputSimUploads', this.textContent)">1</button>  
-            <button onclick="setInputValue('inputSimUploads', this.textContent)">2</button>  
-            <button onclick="setInputValue('inputSimUploads', this.textContent)">4</button>  
-            <button onclick="setInputValue('inputSimUploads', this.textContent)">5</button>  
-            <button onclick="setInputValue('inputSimUploads', this.textContent)">6</button>  
-            <button onclick="setInputValue('inputSimUploads', this.textContent)">10</button>  
-          </td></tr>
-          <tr><td>Chunk size (kb):</td><td><input id="inputChunkSize" type="text" value="1024">
-            <button onclick="setInputValue('inputChunkSize', -1)">Unchunked</button>  
-            <button onclick="setInputValue('inputChunkSize', this.textContent)">256</button>  
-            <button onclick="setInputValue('inputChunkSize', this.textContent)">512</button>  
-            <button onclick="setInputValue('inputChunkSize', this.textContent)">1024</button>  
-            <button onclick="setInputValue('inputChunkSize', this.textContent)">2048</button>  
-            <button onclick="setInputValue('inputChunkSize', this.textContent)">4096</button>  
-          </td></tr>
-	  <tr><td>Kaltura Service URL:</td><td><input id="serviceUrl" type="text" value="//www.kaltura.com"> 
-		  <tr><td>KS:</td><td><textarea cols="100" id="inputKS" placeholder="Replace this text with a valid Kaltura Session"></textarea></td></tr>
-      </table>
+      <fieldset>
+	  <div class="row">
+	  <div class="col-sm-6">
+	  <div class="form-group valid-row">
+	    <label for="serviceUrl">Kaltura Service URL: <span class="required" title="This field is required.">*</span></label>
+	    <input class="form-control" id="serviceUrl" type="text" value="//upload.kaltura.com" size="30">
+	  </div>
+	  <div class="form-group valid-row">
+	    <label for="userId">User: <span class="required" title="This field is required.">*</span></label>
+	    <input class="form-control" id="userId" type="text" size="30">
+	  <div class="form-group valid-row">
+	  </div>
+	    <label for="password">Password: <span class="required" title="This field is required.">*</span></label>
+	    <input class="form-control" id="mypassword" type="password" size="30">
+	  </div>
+	  <div class="form-group valid-row">
+	    <label for="partnerId">Partner ID (optional):</label>
+	    <input class="form-control" id="partnerId" type="text" size="30">
+	  </div>
+	  <div class="form-group valid-row">
+	    <input id="gen_ks" type="button" value="Generate KS" onclick="genKS(document.getElementById('serviceUrl').value+'/api_v3',document.getElementById('userId').value,document.getElementById('mypassword').value,document.getElementById('partnerId').value)"> </td></tr> 
+	  </div>
+	  <div class="form-group valid-row">
+	    <label for="ks">KS:</label>
+	    <textarea cols="100" id="inputKS" placeholder="Input a valid Kaltura Session or input creds above to generate one"></textarea>
+	  </div>
+	  <div class="form-group valid-row">
+	    <label for="inputSimUploads">Simultaneous uploads:</label>
+	    <input id="inputSimUploads" type="text" value="5"> 
+	  </div>
+	  <div class="form-group valid-row">
+	    <label for="inputChunkSize">Chunk size (kb):</label>
+	    <select id="inputChunkSize" name="inputChunkSize" class="form-control select">
+		<option value="Unchunked">Unchunked</option>
+		<option value="256">256</option>
+		<option value="512">512</option>
+		<option value="1024">1024</option>
+		<option value="2048">2048</option>
+		<option value="4096">4096</option>
+		<option value="1024" selected="selected">10240</option>
+	    </select>
+	  </div>
+	  </div>
+	  </div>
+	  </fieldset>
       
-      
-
       <div class="resumable-drop" ondragenter="jQuery(this).addClass('resumable-dragover');" ondragend="jQuery(this).removeClass('resumable-dragover');" ondrop="jQuery(this).removeClass('resumable-dragover');">
         Drop video files here to upload or <a class="resumable-browse"><u>select from your computer</u></a>
       </div>
@@ -74,17 +99,43 @@
       <div id="report" style="color: rgb(0, 111, 255);"></div>
 
       <ul class="resumable-list"></ul>
+      </div>
+	  </div>
 
       <script>
         var kalturaSessionKey = null;
+	var kalturaPartnerId = null;
+	var kalturaUserId = null;
         var kalturaServerBase = null; 
 	var uploadToken = new Array();
         var lastUploadToken = null;
 	//var fileName = null;
-        
+       
+	function genKS(server,userId, password, partnerId)
+	{
+	    var params;
+	    if (partnerId){
+		params="loginId="+encodeURIComponent(userId)+"&password="+encodeURIComponent(password)+"&partnerId="+encodeURIComponent(partnerId);
+	    }else{
+		params="loginId="+encodeURIComponent(userId)+"&password="+encodeURIComponent(password);
+	    }
+            kDoJSONRequest(server, null, "/service/user/action/loginByLoginId", 
+		params, function(ks) {
+		    console.log(ks);
+		    if (!ks){
+			console.log('error generating KS');
+			return false;
+		    }
+		document.getElementById("inputKS").value=ks;
+            });
+	}    
         function kDoJSONRequest(server, ks, path, queryString, callback) {
             
-            var url = server + path + "?format=1&ks=" + ks + "&" + queryString;
+	    if (ks){
+		var url = server + path + "?format=1&ks=" + ks + "&" + queryString;
+	    }else{
+		var url = server + path + "?format=1&" + queryString;
+	    }
             
             var xhr = new XMLHttpRequest();
             xhr.open("POST", url, true);
@@ -95,10 +146,9 @@
             xhr.send();
         }
         
-        function kAnalyticsRequest(query) {
+        function analyticsRequest(endpoint, query) {
             //do something with the upload stats for QoS
-            /*
-            var url = "http://uploadnalytics/upload_stats.php";
+            
             var params = [];
             for (var key in query) {
                 if (query.hasOwnProperty(key)) {
@@ -107,33 +157,44 @@
                 }
             }
             params = params.join('&');
-            url = url + "?" + params;
+            url = endpoint + "?" + params;
 
             var xhr = new XMLHttpRequest();
-            xhr.open("GET", url, true);
+            xhr.open("POST", url, true);
             xhr.send();
-            */
         }
 
-        function kAddUploadToNewMedia(server, ks, uploadToken, name) {
+        function kAddUploadToNewMedia(server, ks, uploadToken, name, report) {
             
             kDoJSONRequest(server, ks, "/service/media/action/addFromUploadedFile", 
                 "mediaEntry:name=" + encodeURIComponent(name) + "&mediaEntry:mediaType=1" +
                 "&uploadTokenId=" + uploadToken, function(response) {
+		var kalturaEntryId=null;
 		var reportDiv = document.getElementById("report");
-		    if (!response.id){
+		if (response.id){
+			kalturaEntryId=response.id;
+			reportDiv.style.color="rgb(0, 111, 255)";
+			status_msg ="Last fully uploaded entry ID: <b>"+response.id + "</b>, Entry Name: <b>"+response.name+"</b>"; 
+			report['entry_id']=kalturaEntryId;
+			is_success = true;
+		}else{
 			reportDiv.style.color="red";
-			reportDiv.innerHTML='Upload ERROR! Code: ' + response.code + 'Message: ' + response.message;
-			return false;
-		    }
-		    reportDiv.style.color="rgb(0, 111, 255)";
-		    reportDiv.innerHTML="Last fully uploaded entry ID: <b>"+response.id + "</b>, Entry Name: <b>"+response.name+"</b>";
+			status_msg ='Upload ERROR! Code: ' + response.code + 'Message: ' + response.message;
+			is_success = false;
+		}
+
+		console.log('entry ID is '+kalturaEntryId);
+		reportDiv.innerHTML=status_msg;
+		report['last_status']=status_msg;
+		// Reflect that the file upload has completed
+		analyticsRequest('http://jessex/parallel-upload/process_upload_stats.php',report);
+		return is_success;
             });
         }
         
 
 
-        function kUpload(server, ks, fileName, fileUniqueIdentifier, fileSize, resumable) {
+        function kUpload(server, ks, fileName, fileUniqueIdentifier, fileSize, resumable, report) {
             resumable.opts.target = server + "/service/uploadToken/action/upload";
             resumable.opts.fileParameterName = "fileData";
             
@@ -145,8 +206,11 @@
 		    if (!response.id){
 			var reportDiv = document.getElementById("report");
 			reportDiv.style.color="red";
-			$(reportDiv).html('Upload ERROR! Code: ' + response.code + '</br>Message: ' + response.message);
+			status_msg='Upload ERROR! Code: ' + response.code + '</br>Message: ' + response.message;
+			$(reportDiv).html(status_msg);
 			$('.resumable-file-progress').html('FAILED');
+			report['last_status']=status_msg;
+			analyticsRequest('http://jessex/parallel-upload/process_upload_stats.php',report);
 			return false;
 		    }
                     
@@ -199,6 +263,15 @@
                 file.bootstrap();
                 kalturaSessionKey = getInputValue("inputKS");
 		kalturaServerBase = getInputValue("serviceUrl")+"/api_v3";
+		kDoJSONRequest(kalturaServerBase, kalturaSessionKey, "/service/user/action/get", null,function(response) {
+			console.log(response);
+			if (!response.partnerId){
+			    console.log('error when calling user.get()' + response.code + ' ' + response.message);
+			    return false;
+			}
+			kalturaPartnerId=response.partnerId;
+			kalturaUserId=response.id;
+		});
 
               // Show progress pabr
               $('.resumable-progress, .resumable-list').show();
@@ -208,8 +281,18 @@
               // Add the file to the list
               $('.resumable-list').append('<li class="resumable-file-'+file.uniqueIdentifier+'">Uploading <span class="resumable-file-name"></span> <span class="resumable-file-progress"></span>');
               $('.resumable-file-'+file.uniqueIdentifier+' .resumable-file-name').html(file.fileName);
+              // add upload to new media
+              var report = {
+                  user_id: kalturaUserId, 
+                  token_id: uploadToken[file.uniqueIdentifier], 
+                  partner_id: kalturaPartnerId, 
+                  concurrent_chunks: r.opts.simultaneousUploads,
+                  chunk_size: r.opts.chunkSize,
+                  file_size: file.size,
+                  filename: file.fileName, 
+              };
               // Actually start the upload
-                kUpload(kalturaServerBase, kalturaSessionKey, file.fileName, file.uniqueIdentifier, file.size, r);
+                kUpload(kalturaServerBase, kalturaSessionKey, file.fileName, file.uniqueIdentifier, file.size, r, report);
             });
           r.on('pause', function(){
               // Show resume, hide pause
@@ -225,24 +308,22 @@
               var mbSize = file.size/1024/1024;
               var speed = mbSize/duration;
               $('.resumable-file-'+file.uniqueIdentifier+' .resumable-file-progress').html('completed! File size: ' + mbSize.toFixed(3) + 'MB , Upload duration: ' + duration.toFixed(1) + ' secs, Speed: '+ speed.toFixed(1)+ ' MB/s');
-              // Reflect that the file upload has completed
-              /*var endTime = Date.now();
-              var report = {
-                  tokenId: lastUploadToken, 
-                  filename: file.fileName, 
-                  start_time: Math.floor(lastUploadStartTime/1000),
-                  end_time: Math.floor(endTime/1000),
-                  file_size: file.size,
-                  method: file.chunks.length > 1 ? 1 : 0,
-                  chunks: r.opts.simultaneousUploads,
-                  chunk_size: r.opts.chunkSize,
-              };
-              kAnalyticsRequest(report);
-	      */
+	      
 
               
               // add upload to new media
-              kAddUploadToNewMedia(kalturaServerBase, kalturaSessionKey, uploadToken[file.uniqueIdentifier], file.uniqueIdentifier);
+              var report = {
+                  user_id: kalturaUserId, 
+                  token_id: uploadToken[file.uniqueIdentifier], 
+                  partner_id: kalturaPartnerId, 
+		  upload_total_time: duration,
+                  concurrent_chunks: r.opts.simultaneousUploads,
+                  total_chunks: file.chunks.length,
+                  chunk_size: r.opts.chunkSize,
+                  file_size: file.size,
+                  filename: file.fileName, 
+              };
+              kAddUploadToNewMedia(kalturaServerBase, kalturaSessionKey, uploadToken[file.uniqueIdentifier], file.uniqueIdentifier, report);
               
             });
           r.on('fileError', function(file, message){
