@@ -110,8 +110,9 @@
         var kalturaServerBase = null; 
 	var uploadToken = new Array();
         var lastUploadToken = null;
-	var enableStatsReporting = false;
-	//var fileName = null;
+	// if you wish to report the stats to an SQLITE DB, set this to where you host process_upload_stats.php
+        // you also need to create the SQLITE DB from the chunked_upload.sql schema and ensure the web server user has write permissions to it and the directory in which it resides	
+	var statsReportingEndpoint = null;
 
         function genKS(server,userId, password, partnerId)
         {
@@ -135,9 +136,9 @@
         function kDoJSONRequest(server, ks, path, queryString, callback) {
             
 	    if (ks){
-		var url = server + path + "?format=1&ks=" + ks + "&" + queryString;
+		var url = server + path + "?clientTag=kaltura-parallel-upload-resumablejs&format=1&ks=" + ks + "&" + queryString;
 	    }else{
-		var url = server + path + "?format=1&" + queryString;
+		var url = server + path + "?clientTag=kaltura-parallel-upload-resumablejs&format=1&" + queryString;
 	    }
             
             var xhr = new XMLHttpRequest();
@@ -190,8 +191,8 @@
 		reportDiv.innerHTML=status_msg;
 		report['last_status']=status_msg;
 		// Reflect that the file upload has completed
-		if (enableStatsReporting){
-			analyticsRequest('/process_upload_stats.php',report);
+		if (statsReportingEndpoint){
+			analyticsRequest(statsReportingEndpoint,report);
 		}
 		return is_success;
             });
@@ -215,8 +216,8 @@
 			$(reportDiv).html(status_msg);
 			$('.resumable-file-progress').html('FAILED');
 			report['last_status']=status_msg;
-			if (enableStatsReporting){
-				analyticsRequest('http://jessex/parallel-upload/process_upload_stats.php',report);
+			if (statsReportingEndpoint){
+				analyticsRequest(statsReportingEndpoint,report);
 			}
 			return false;
 		    }
