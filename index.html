@@ -110,26 +110,28 @@
         var kalturaServerBase = null; 
 	var uploadToken = new Array();
         var lastUploadToken = null;
+	var enableStatsReporting = false;
 	//var fileName = null;
-       
-	function genKS(server,userId, password, partnerId)
-	{
-	    var params;
-	    if (partnerId){
-		params="loginId="+encodeURIComponent(userId)+"&password="+encodeURIComponent(password)+"&partnerId="+encodeURIComponent(partnerId);
-	    }else{
-		params="loginId="+encodeURIComponent(userId)+"&password="+encodeURIComponent(password);
-	    }
+
+        function genKS(server,userId, password, partnerId)
+        {
+            var params;
+            if (partnerId){
+                params="loginId="+encodeURIComponent(userId)+"&password="+encodeURIComponent(password)+"&partnerId="+encodeURIComponent(partnerId);
+            }else{
+                params="loginId="+encodeURIComponent(userId)+"&password="+encodeURIComponent(password);
+            }
             kDoJSONRequest(server, null, "/service/user/action/loginByLoginId", 
-		params, function(ks) {
-		    console.log(ks);
-		    if (!ks){
-			console.log('error generating KS');
-			return false;
-		    }
-		document.getElementById("inputKS").value=ks;
+                params, function(ks) {
+                    if (ks.code && ks.message){
+                        document.getElementById("inputKS").value='error generating KS '+ ks.message;
+                        return false;
+                    }else{
+                        document.getElementById("inputKS").value=ks;
+                    }
             });
-	}    
+        }   
+       
         function kDoJSONRequest(server, ks, path, queryString, callback) {
             
 	    if (ks){
@@ -188,7 +190,9 @@
 		reportDiv.innerHTML=status_msg;
 		report['last_status']=status_msg;
 		// Reflect that the file upload has completed
-		analyticsRequest('/process_upload_stats.php',report);
+		if (enableStatsReporting){
+			analyticsRequest('/process_upload_stats.php',report);
+		}
 		return is_success;
             });
         }
@@ -211,7 +215,9 @@
 			$(reportDiv).html(status_msg);
 			$('.resumable-file-progress').html('FAILED');
 			report['last_status']=status_msg;
-			analyticsRequest('http://jessex/parallel-upload/process_upload_stats.php',report);
+			if (enableStatsReporting){
+				analyticsRequest('http://jessex/parallel-upload/process_upload_stats.php',report);
+			}
 			return false;
 		    }
                     
@@ -265,7 +271,6 @@
                 kalturaSessionKey = getInputValue("inputKS");
 		kalturaServerBase = getInputValue("serviceUrl")+"/api_v3";
 		kDoJSONRequest(kalturaServerBase, kalturaSessionKey, "/service/user/action/get", null,function(response) {
-			console.log(response);
 			if (!response.partnerId){
 			    console.log('error when calling user.get()' + response.code + ' ' + response.message);
 			    return false;

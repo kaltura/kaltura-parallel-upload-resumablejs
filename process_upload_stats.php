@@ -1,6 +1,5 @@
 <?php
 define ('DBFILE',dirname(__FILE__).'/chunked_upload.db');
-error_log(print_r($_GET,true),3,'/tmp/parallel_up.log');
 $user_id=SQLite3::escapeString($_GET['user_id']);
 $token_id=SQLite3::escapeString($_GET['token_id']);
 $entry_id=SQLite3::escapeString($_GET['entry_id']);
@@ -17,7 +16,6 @@ $last_status=SQLite3::escapeString($_GET['last_status']);
 
 $db=new SQLite3(DBFILE) or die('Unable to connect to database '. DBFILE);
 $query="insert into chunked_uploads values(NULL,'$user_id','$token_id','$entry_id',$partner_id,$upload_total_time,$concurrent_chunks,$total_chunks,$chunk_size,$file_size,'$filename','$x_forwarded_for','$remote_addr','$last_status',DATE())";
-error_log($query,3,'/tmp/parallel_up.log');
 $db->exec($query);
 if ($db->lastErrorCode()){
     $msg=json_encode('ERROR: #' . $db->lastErrorCode() . ' '.$db->lastErrorMsg().' :(');
