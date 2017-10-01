@@ -925,7 +925,7 @@
 	    // Kaltura uploadtoken.upload() needs the last chunk to be sent last
 		    if (chunk.offset+1 == numOfChunks && (successfulChunks !=(numOfChunks -1))){
 			console.log("Skipping last chunk for now..." +chunk.offset);
-			found = false;
+			//found = false;
 		    }else{
 			if(chunk.status()=='pending' && chunk.preprocessState === 0) {
 			    //console.log("sending " + chunk.offset + " Out of " + numOfChunks + " " + successfulChunks + " already processed");

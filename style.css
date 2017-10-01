@@ -655,16 +655,18 @@ footer styles
   height: 1%;
 }
 #footer .f1 {
-  position: relative;
+  position: fixed;
   background: #188093;
   z-index: 9999;
   display: table-cell;
   width: 100%;
-   position: absolute;
- bottom: 0;
+   /*position: absolute;*/
+ bottom: 0px;
+ display: inline-block;
 }
 #footer .container, #footer .content {
   padding: 10px 10px 15px;
+ display: inline-block;
 }
 #footer p {
   margin: 0;
