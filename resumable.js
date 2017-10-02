@@ -883,7 +883,7 @@
         });
         if(firstStillUploading) {
 	    console.log("Waiting for the first chunk to reach the server...");
-	    return(false);
+	    return(true);
 	}
 
 	// send the first chunk first.
@@ -896,24 +896,6 @@
         });
         if(found) return(true);
 
-      // In some cases (such as videos) it's really handy to upload the first
-      // and last chunk of a file quickly; this let's the server check the file's
-      // metadata and determine if there's even a point in continuing.
-      if ($.getOpt('prioritizeFirstAndLastChunk')) {
-        $h.each($.files, function(file){
-          if(file.chunks.length && file.chunks[0].status()=='pending' && file.chunks[0].preprocessState === 0) {
-            file.chunks[0].send();
-            found = true;
-            return(false);
-          }
-          if(file.chunks.length>1 && file.chunks[file.chunks.length-1].status()=='pending' && file.chunks[file.chunks.length-1].preprocessState === 0) {
-            file.chunks[file.chunks.length-1].send();
-            found = true;
-            return(false);
-          }
-        });
-        if(found) return(true);
-      }
 
       // Now, simply look for the next, best thing to upload
       $h.each($.files, function(file){
@@ -924,14 +906,14 @@
 	    // do not send the last chunk until all other chunks were successfully sent.
 	    // Kaltura uploadtoken.upload() needs the last chunk to be sent last
 		    if (chunk.offset+1 == numOfChunks && (successfulChunks !=(numOfChunks -1))){
-			console.log("Skipping last chunk for now..." +chunk.offset);
+			//console.log("Skipping last chunk for now..." +chunk.offset);
 			//found = false;
 		    }else{
 			if(chunk.status()=='pending' && chunk.preprocessState === 0) {
 			    //console.log("sending " + chunk.offset + " Out of " + numOfChunks + " " + successfulChunks + " already processed");
 			    chunk.send();
 			    found = true;
-			    return(false);
+			    //return(false);
 			}
 		    }
           });
@@ -1033,7 +1015,6 @@
       $.fire('uploadStart');
       for (var num=1; num<=$.getOpt('simultaneousUploads'); num++) {
         $.uploadNextChunk();
-        var firstStillUploading = false;
       }
     };
     $.pause = function(){
