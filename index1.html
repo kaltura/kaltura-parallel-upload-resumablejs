@@ -113,15 +113,17 @@
 	  </div>
 
       <script >
-          function setInputValue(id, value) {
-              document.getElementById(id).value=value;
-          }
-          function getInputValue(id) {
-              return document.getElementById(id).value;
-          }
-          var VERY_BIG_CHUNK = Math.pow(2,100);
-      </script>
-      <script>
+	function setInputValue(id, value)
+	{
+		document.getElementById(id).value=value;
+	}	
+
+	function getInputValue(id) 
+	{
+		return document.getElementById(id).value;
+	}
+
+	var VERY_BIG_CHUNK = Math.pow(2,100);
         var kalturaSessionKey = null;
 	var kalturaPartnerId = null;
 	var kalturaUserId = null;
@@ -151,7 +153,8 @@
             });
         }   
        
-        function kDoJSONRequest(server, ks, path, queryString, callback) {
+        function kDoJSONRequest(server, ks, path, queryString, callback) 
+	{
             
 	    if (ks){
 		var url = server + path + "?clientTag=kaltura-parallel-upload-resumablejs&format=1&ks=" + ks + "&" + queryString;
@@ -168,7 +171,8 @@
             xhr.send();
         }
         
-        function analyticsRequest(endpoint, query) {
+        function analyticsRequest(endpoint, query) 
+	{
             //do something with the upload stats for QoS
             
             var params = [];
@@ -185,8 +189,9 @@
             xhr.open("POST", url, true);
             xhr.send();
         }
-        function kAddMediaEntry(server, ks, name, description, tags) {
-            
+        
+	function kAddMediaEntry(server, ks, name, description, tags) 
+	{    
             kDoJSONRequest(server, ks, "/service/media/action/add", 
                 "entry:name=" + encodeURIComponent(name) + "&entry:mediaType=1" +
                 "&entry:description=" + description + "&entry:tags=" + tags, function(response) {
@@ -210,8 +215,8 @@
             });
         }
 
-        function kAddContent(server, ks, uploadToken, entryId, report) {
-            
+        function kAddContent(server, ks, uploadToken, entryId, report) 
+	{    
             kDoJSONRequest(server, ks, "/service/media/action/addContent", 
                 "entryId=" + entryId + "&resource:objectType=KalturaUploadedFileTokenResource" +
                 "&resource:token=" + uploadToken, function(response) {
@@ -239,38 +244,8 @@
             });
         }
 
-        function kAddUploadToNewMedia(server, ks, uploadToken, name, report) {
-            
-            kDoJSONRequest(server, ks, "/service/media/action/addFromUploadedFile", 
-                "mediaEntry:name=" + encodeURIComponent(name) + "&mediaEntry:mediaType=1" +
-                "&uploadTokenId=" + uploadToken, function(response) {
-		var kalturaEntryId=null;
-		var reportDiv = document.getElementById("report");
-		if (response.id){
-			kalturaEntryId=response.id;
-			reportDiv.style.color="rgb(0, 111, 255)";
-			status_msg ="Last fully uploaded entry ID: <b>"+response.id + "</b>, Entry Name: <b>"+response.name+"</b>"; 
-			report['entry_id']=kalturaEntryId;
-			is_success = true;
-		}else{
-			reportDiv.style.color="red";
-			status_msg ='Upload ERROR! Code: ' + response.code + 'Message: ' + response.message;
-			is_success = false;
-		}
-
-		reportDiv.innerHTML=status_msg;
-		report['last_status']=status_msg;
-		// Reflect that the file upload has completed
-		if (statsReportingEndpoint){
-			analyticsRequest(statsReportingEndpoint,report);
-		}
-		return is_success;
-            });
-        }
-        
-
-
-        function kUpload(server, ks, fileName, fileUniqueIdentifier, fileSize, resumable, report) {
+        function kUpload(server, ks, fileName, fileUniqueIdentifier, fileSize, resumable, report) 
+	{
             resumable.opts.target = server + "/service/uploadToken/action/upload";
             resumable.opts.fileParameterName = "fileData";
             
